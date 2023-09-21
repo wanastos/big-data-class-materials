@@ -73,4 +73,8 @@ projects/
 # Dropbox
 .DS_Store
 */.DS_Store
-
+recordings/
+*.mp4
+*.bbl
+*.blg
+*.fls
