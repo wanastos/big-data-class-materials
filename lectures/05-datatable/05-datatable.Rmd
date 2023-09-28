@@ -77,7 +77,7 @@ name: prologue
 
 # Checklist
 
-We'll be using the following packages in today's lecture:
+We'll be using the following packages in this lecture:
 - Already installed: **dplyr**, **ggplot2**, **nycflights13**
 - New: **data.table**, **tidyfast**, **dtplyr**, **microbenchmark**
 
@@ -1117,7 +1117,8 @@ microbenchmark(collapse_dplyr(), collapse_dt(), collapse_dt_key(), times = 1)
 
 # Example (cont.)
 
-```{r collapse_comp_key, dependson=collapse_dt, dependson=collapse_dplyr, echo=FALSE, message=FALSE}
+```{r collapse_comp_key,  echo=FALSE, message=FALSE}
+
 storms_dt_key = as.data.table(storms, key = c("name", "year", "month", "day"))
 collapse_dt_key = function() {
   storms_dt_key[, .(wind = mean(wind), pressure = mean(pressure), category = first(category)),
@@ -1295,7 +1296,7 @@ stocks = data.table(time = as.Date('2009-01-01') + 0:1,
 # Reshape from wide to long
 
 Our data are currently in wide format.
-```{r stocks_print, dependson=stocks}
+```{r stocks_print}
 stocks
 ```
 
@@ -1395,6 +1396,7 @@ storms_dt[, .(wind = mean(wind),
 ]]
 .pull-right[
 ```{r storms_ggplot, echo = FALSE, fig.height=6}
+#Note: Debug later. the "first" is not working.
 collapse_dt_key() %>% 
   ggplot(aes(x = pressure, y = wind, col=category)) + 
   geom_point(alpha = 0.3) + 
