@@ -2,8 +2,8 @@
 title: "Data Science for Economists"
 subtitle: "Lecture 7: Webscraping: (2) Client-side and APIs"
 author:
-  name: Grant R. McDermott
-  affiliation: University of Oregon | [EC 607](https://github.com/uo-ec607/lectures)
+  name: Kyle Coombs
+  affiliation: "Bates College | [EC/DCS 368](https://github.com/ECON368-fall2023-big-data-and-economics)" #"`r format(Sys.time(), '%d %B %Y')`"
 # date: Lecture 7  #"`r format(Sys.time(), '%d %B %Y')`"
 output: 
   html_document:
@@ -13,7 +13,7 @@ output:
     toc: yes
     toc_depth: 4
     toc_float: yes
-    keep_md: false
+    keep_md: true
     keep_tex: false ## Change to true if want keep intermediate .tex file
     css: css/preamble.css ## For multi-col environments
   pdf_document:
@@ -54,8 +54,10 @@ Today I'll be using [JSONView](https://jsonview.com/), a browser extension that 
 
 ### R packages 
 
-- New: **jsonlite**, **httr**, **listviewer**, **usethis**, **fredr**
+- New: **jsonlite**, **httr**, **listviewer**, **usethis**, **fredr**, **tidycensus**
 - Already used: **tidyverse**, **lubridate**, **hrbrthemes**, **janitor**
+
+As a note, **httr2** is a newer version of **httr** that is currently in development. It is recommended to use it, but I'm sticking with **httr** for now since it has fewer bells and whistles to teach. I'll probably switch to **httr2** in the next iteration of this course once the package is more stable.
 
 Here's a convenient way to install (if necessary) and load all of the above packages.
 
@@ -63,11 +65,11 @@ Here's a convenient way to install (if necessary) and load all of the above pack
 ## Load and install the packages that we'll be using today
 if (!require("pacman")) install.packages("pacman")
 pacman::p_load(tidyverse, httr, lubridate, hrbrthemes, janitor, jsonlite, fredr, 
-               listviewer, usethis)
+               listviewer, usethis, tidycensus)
 ## My preferred ggplot2 plotting theme (optional)
 theme_set(theme_minimal())
-```
 
+```
 
 ## Recap from last time
 
@@ -149,7 +151,7 @@ fromJSON("https://data.cityofnewyork.us/resource/nwxe-4ae8.json?$limit=5")
 
 Getting back on track, let's plot our tree data just to show it worked. One minor thing I want to point out is that `jsonlite::fromJSON()` automatically coerces everything into a character, so we'll also need to convert some columns to numeric before we plot.
 
-```{r nyc3}
+```{r nyc3, warning=FALSE}
 nyc_trees %>% 
   select(longitude, latitude, stump_diam, spc_common, spc_latin, tree_id) %>% 
   mutate_at(vars(longitude:stump_diam), as.numeric) %>% 
@@ -366,15 +368,34 @@ We're going to be revisiting (and setting) environment variables once we get to 
 
 One of the great features about the R (and data science community in general) is that someone has probably written a package that does all the heavy API lifting for you. We'll come across many examples during the remainder of this course, but for the moment I want to flag the **fredr** package ([link](http://sboysel.github.io/fredr/index.html)). Take a look at the "Get started" page to see how you could access the same GDP data as above, but this time going through a package. 
 
-The same goes for **censusapi** or **tidycensus**, which you can use on your problem set. These packages allow you to access data from the Census API. **censusapi** is a more general package that allows you to access any Census API endpoint. **tidycensus** is a more specific package that allows you to access a subset of the Census API endpoints (e.g. American Community Survey and the Decennial census), but does so in a more user-friendly way. As is always the case, you can use **httr** or **httr2** to do the same thing! 
+The same goes for **censusapi** or **tidycensus**, which you can use on your problem set. These packages allow you to access data from the Census API. **censusapi** is a more general package that allows you to access any Census API endpoint. **tidycensus** is a more specific package that allows you to access a subset of the Census API endpoints (e.g. American Community Survey and the Decennial census), but does so in a more user-friendly way. As is always the case, you can use **httr** or **httr2** to do the same thing! See the [Census Available API](https://www.census.gov/data/developers/data-sets.html) webpage for more on how to access different API endpoints.
+
+Do you learn to learn by doing? Well you're in luck! Many of these packages include a `show_call` option to see the actual API call that is being used. This can help you learn the ins and outs, so that you can eventually write your own API calls from scratch. For example, here's how to see the API call that **tidycensus** is using to get Median Household Income in the Past 12 Months (inflation-adjusted dollars) from 5-year American Community Survey for each county in Maine in 2017:
+
+```{r tidycensus}
+#library(tidycensus) # Already loaded
+get_acs(geography = "county", 
+  state="ME", 
+  variables = "B19013_001",
+  year = 2017, 
+  show_call = TRUE,
+  survey='acs5')
+```
+
+Curious how to figure out variable names in these APIs? Here are some options:
+
+1. Read the documentation. For example, the Census Bureau has a [variable lookup tool](https://api.census.gov/data/2017/acs/acs5/variables.html) for each year that you can use to search for variables. The syntax of the link is simple: https://api.census.gov/data/<year>/<survey>/<sub-survey>/variables.html But be warned, these lists are large and may freeze your browser if you have too much happening on your computer. 
+2. Ask ChatGPT or GitHub CoPilot to tell you the code for a given variable. 
+
+Want to find a list of all the Census APIs? Navigate to: https://api.census.gov/data.html. If you want to look within a specific year, https://api.census.gov/data/<year>.html, and so on.
 
 ## Application 3: World rugby rankings
 
-Our final application will involve a more challenging case where the API endpoint is *hidden from view*. In particular, I'm going to show you how to access data on [**World Rugby rankings**](http://www.worldrugby.org/rankings/mru). Because --- real talk --- what's more important than teaching Americans about rugby?
+Our final application will involve a more challenging case where the API endpoint is *hidden from view*. In particular, I'm going to show you how to access data on [**World Rugby rankings**](https://www.world.rugby/tournaments/rankings/mru). Because --- real talk --- what's more important than teaching Americans about rugby?
 
-*<b>Disclaimer:</b> World Rugby's [Terms & Conditions](https://www.world.rugby/terms-and-conditions) permits data downloading for own non-commerical use. It seems reasonable to me that these lecture notes fall under this use category.^[If you're reading this from World Rugby and disagree, please [contact me](mailto:kcoombs@bates.edu). In my defence, I am still awaiting a reply to my initial email confirming my interpretation of your T&Cs...] None of the methods presented below should be construed as an endorsement of data acquisition and use that violates these terms. Again: Just because you can scrape something, doesn't mean you should.*
+*<b>Disclaimer:</b> World Rugby's [Terms & Conditions](https://www.world.rugby/terms-and-conditions) permits data downloading for own non-commerical use. It seems reasonable to me that these lecture notes fall under this use category.^[If you're reading this from World Rugby and disagree, please [contact me](mailto:kcoombs@bates.edu).] None of the methods presented below should be construed as an endorsement of data acquisition and use that violates these terms. Again: Just because you can scrape something, doesn't mean you should.*
 
-Start by taking a look at the complicated structure of the website in a [live session](http://www.worldrugby.org/rankings). Pay attention to the various tables and other interactive elements like calendars. Now take a minute or two for a quick challenge: Try to scrape the full country rankings using the `rvest` + CSS selectors approach that we practiced last time...
+Start by taking a look at the complicated structure of the website in a [live session](https://www.world.rugby/tournaments/rankings/mru). Pay attention to the various tables and other interactive elements like calendars. Now take a minute or two for a quick challenge: Try to scrape the full country rankings using the `rvest` + CSS selectors approach that we practiced last time...
 
 .
 
@@ -559,6 +580,8 @@ if (!knitr::is_html_output()){
 
 ## Further resources and exercises
 
+- There are thousands of easily accessible APIs out there. Here's a [list](https://github.com/public-apis/public-apis). Look out for one on one of the problem sets. 
+
 - [Here](https://www.pscp.tv/w/1ynKOpVnERrGR) is a short, live video stream that I did for scraping traffic fatality data from [LA's Open Data portal](https://data.lacity.org/). As Grant mentions in the video, this covers very similar ground to today's lecture. But he expands a bit on using API parameters to query (i.e. wrangle and summarise) data directly up on the host server before scraping it.
 
 - Hadley Wickham has started creating a package called [**httr2**](https://httr2.r-lib.org/index.html) that is a rewrite of **httr**. The goal is to be a more flexible tool for working with APIs, handle encryption, and report errors as R errors, which are more tractable for an R user. It's still in development, but you can take a look at the [introductory vignette](https://httr2.r-lib.org/articles/httr2.html) to see how it compares to the current version of **httr**.
@@ -569,6 +592,6 @@ if (!knitr::is_html_output()){
 
 - Greg Reda's "[Web Scraping 201: finding the API](http://www.gregreda.com/2015/02/15/web-scraping-finding-the-api/)" covers much of the same ground as we have here. While he focuses on Python tools, I've found it to be a handy reference over the years. (You can also take a look at the earlier posts in Greg's webscraping series --- [Part 1](http://www.gregreda.com/2013/03/03/web-scraping-101-with-python/) and [Part 2](http://www.gregreda.com/2013/04/29/more-web-scraping-with-python/) --- to see some Python equivalents of the `rvest` tools that we've been using.) 
 
-- Ian London (another Python user) has a nice blog post on "[Discovering hidden APIs](https://ianlondon.github.io/blog/web-scraping-discovering-hidden-apis/)" from Airbnb.
+- Ian London (another Python user) has a nice blog post on "[Discovering hidden APIs](https://ianlondon.github.io/blog/web-scraping-discovering-hidden-apis/)" from Airbnb. Leon Yin has a similar post entitled "[Journalists, You Should Be Looking for Undocumented APIs. Here’s How to Start](https://themarkup.org/levelup/2023/03/03/journalists-you-should-be-looking-for-undocumented-apis-heres-how-to-start)" with a [step-by-step tutorial](https://inspectelement.org/apis.html)
 
 - Finally, while the methods covered in the last two lectures should have you covered for 95% (99%?) of your webscraping needs, there are some corner cases where they won't work. In particular, you may run into cases where website content is rendered dynamically with JavaScript. In times like these, you'll need to spin up a so-called "headless" browser to extract the content. More [here](https://rud.is/b/2017/02/09/diving-into-dynamic-website-content-with-splashr/) and [here](https://twitter.com/grant_mcdermott/status/1192889722672041984).
