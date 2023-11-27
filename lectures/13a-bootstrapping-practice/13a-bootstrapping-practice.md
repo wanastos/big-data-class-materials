@@ -1,6 +1,6 @@
 ---
 title: Big Data and Economics
-subtitle: Bootstrapping, Functions, and Parallel Processing
+subtitle: Bootstrapping, Functions, and Parallel Programming
 author:
   name: Kyle Coombs
   affiliation: Bates College | [DCS/ECON 368](https://github.com/ECON368-fall2023-big-data-and-economics/big-data-class-materials)  
@@ -44,7 +44,7 @@ knit: (function(inputFile, encoding) {
 
 ### R packages 
 
-It's important to note that "base" R already provides all of the tools to implement a regression discontinuity design, but there are some great other tools to use!
+It's important to note that "base" R already provides all of the tools to implement bootstrapping, but there are some great other tools to use!
 
 - New: **boot**, **parallel**, **tictoc**, **pbapply**, **future**, **future.apply**, **furrr**
 - Already used: **tidyverse**, **fixest**, **haven**, **sandwich**, **broom**, **stargazer**, **lmtest**, **AER**
@@ -55,7 +55,8 @@ A convenient way to install (if necessary) and load everything is by running the
 ```r
 ## Load and install the packages that we'll be using today
 if (!require("pacman")) install.packages("pacman")
-pacman::p_load(boot,doParallel,fixest,sandwich,haven,tidyverse,broom,stargazer,lmtest,tictoc,parallel,pbapply,future,future.apply,furrr,AER)
+pacman::p_load(boot,doParallel,fixest,sandwich,haven,tidyverse,broom,stargazer,
+  lmtest,tictoc,parallel,pbapply,future,future.apply,furrr,AER)
 
 ## My preferred ggplot2 plotting theme (optional)
 theme_set(theme_minimal())
@@ -74,34 +75,32 @@ cleaned_resumes <- ResumeNames %>%
   mutate(female=gender=='female',
     afam=ethnicity=='afam',
     call=call=='yes') %>%
-    select(female, afam,call) %>%
+    select(name,female, afam,call) %>%
   as_tibble()
 
 cleaned_resumes
 ```
 
 ```
-## # A tibble: 4,870 × 3
-##    female afam  call 
-##    <lgl>  <lgl> <lgl>
-##  1 TRUE   FALSE FALSE
-##  2 TRUE   FALSE FALSE
-##  3 TRUE   TRUE  FALSE
-##  4 TRUE   TRUE  FALSE
-##  5 TRUE   FALSE FALSE
-##  6 FALSE  FALSE FALSE
-##  7 TRUE   FALSE FALSE
-##  8 TRUE   TRUE  FALSE
-##  9 TRUE   TRUE  FALSE
-## 10 FALSE  TRUE  FALSE
+## # A tibble: 4,870 × 4
+##    name    female afam  call 
+##    <fct>   <lgl>  <lgl> <lgl>
+##  1 Allison TRUE   FALSE FALSE
+##  2 Kristen TRUE   FALSE FALSE
+##  3 Lakisha TRUE   TRUE  FALSE
+##  4 Latonya TRUE   TRUE  FALSE
+##  5 Carrie  TRUE   FALSE FALSE
+##  6 Jay     FALSE  FALSE FALSE
+##  7 Jill    TRUE   FALSE FALSE
+##  8 Kenya   TRUE   TRUE  FALSE
+##  9 Latonya TRUE   TRUE  FALSE
+## 10 Tyrone  FALSE  TRUE  FALSE
 ## # ℹ 4,860 more rows
 ```
 
 ## Functions 
 
 Functions are a great way to make your code more readable and reusable. They are also a great way to make sure you don't make mistakes when you're running the same code over and over again.
-
-
 
 ### Basic function to sample data
 
@@ -120,19 +119,19 @@ random_sample(data=cleaned_resumes)
 ```
 
 ```
-## # A tibble: 4,870 × 3
-##    female afam  call 
-##    <lgl>  <lgl> <lgl>
-##  1 TRUE   FALSE FALSE
-##  2 FALSE  TRUE  FALSE
-##  3 TRUE   TRUE  FALSE
-##  4 TRUE   FALSE FALSE
-##  5 FALSE  TRUE  FALSE
-##  6 FALSE  FALSE FALSE
-##  7 TRUE   TRUE  FALSE
-##  8 TRUE   TRUE  FALSE
-##  9 TRUE   FALSE FALSE
-## 10 TRUE   TRUE  FALSE
+## # A tibble: 4,870 × 4
+##    name     female afam  call 
+##    <fct>    <lgl>  <lgl> <lgl>
+##  1 Meredith TRUE   FALSE FALSE
+##  2 Tremayne FALSE  TRUE  FALSE
+##  3 Aisha    TRUE   TRUE  FALSE
+##  4 Meredith TRUE   FALSE FALSE
+##  5 Rasheed  FALSE  TRUE  FALSE
+##  6 Brad     FALSE  FALSE FALSE
+##  7 Ebony    TRUE   TRUE  FALSE
+##  8 Keisha   TRUE   TRUE  FALSE
+##  9 Sarah    TRUE   FALSE FALSE
+## 10 Tanisha  TRUE   TRUE  FALSE
 ## # ℹ 4,860 more rows
 ```
 
@@ -197,6 +196,32 @@ random_sample_lm(cleaned_resumes)
 ## -0.03381552
 ```
 
+#### Challenge:
+
+Can you repeat the above process, but now with a function that calculates the difference in means? Or runs a t-test? 
+
+### Wrapper functions
+
+You can include other functions that you wrote in the functions you create just like including pre-defined functions from packages in your functions. This is incredibly useful for any iteration work you're doing that automatically feeds the value it iterates over to the function you include. Here's the basic syntax:
+
+
+```r
+function_that_uses_x <- functiion(x) {
+  # Do something with x
+  return(something_with_x)
+}
+
+wrapper_function <- function(i,x) {
+  # Do something with i if you want
+  something <- function_that_uses_x(x)
+  # or do something with i and x together, for example:
+  something <- function_that_uses_x(x)*i
+  # Return something
+  return(something)
+}
+```
+
+Can you write a wrapper for the `random_sample_lm()` function above?
 
 ## Iteration
 
@@ -204,13 +229,109 @@ Iteration is a great way to run the same code over and over again. It's especial
 
 ### For loop
 
-The most basic way to iterate is with a for loop. This is a great way to start because it's easy to understand and you can see what's going on. Let's write a for loop that iterates through the `random_sample_lm()` function 100 times. Make sure to create a list to store the results in.
+The most basic way to iterate is with a for loop. This is a great way to start because it's easy to understand and you can see what's going on. The syntax is really simple too:
 
 
 ```r
-results <- vector("list",100)
+for (i in 1:10) { # index from i to 100.
+  print(i)
+}
+```
+
+```
+## [1] 1
+## [1] 2
+## [1] 3
+## [1] 4
+## [1] 5
+## [1] 6
+## [1] 7
+## [1] 8
+## [1] 9
+## [1] 10
+```
+
+Note that you can also iterate by skipping numbers or even just feed it 
+
+
+```r
+# This example iterates through the odd numbers from 1 to 100
+# because it skips every too.
+for (i in seq(1,10,2)) { # index from i to 100.
+  print(i)
+}
+```
+
+```
+## [1] 1
+## [1] 3
+## [1] 5
+## [1] 7
+## [1] 9
+```
+
+
+```r
+# This example iterates through the odd numbers from 1 to 100
+# because it skips every too.
+for (i in c("words","too")) { # index from i to 100.
+  print(i)
+}
+```
+
+```
+## [1] "words"
+## [1] "too"
+```
+
+Look at your global environment, do you see a variable for `i`? That's cause R creates a variable for `i` and iterates through the values of `i` from 1 to 100. You can use `i` in your code to do something different each time. But if you have too many it get cluttered too.
+
+Note, to record the results of each iteration, you need to create a list to store the results in. The length of this vector is the number of iterations, which you can define with `length()`. This can be inserted in your for loop to track how far you have gone through. Here's an example:
+
+
+```r
+deposit <- vector("list",10)
+iterations <- length(deposit)
+for (i in 1:iterations) {
+  print(paste0(i, "/", iterations))
+  deposit[[i]] <- i
+}
+
+deposit
+```
+
+Let's write a for loop that iterates through the `random_sample_lm()` function 10 times. Make sure to create a list to store the results in. Before you commit to running it 10 times, check that it runs through one iteration. 
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+
+```r
+results <- vector("list",10)
 set.seed(1000) # replication
-for (i in 1:100) {
+for (i in 1:10) {
   results[[i]] <- random_sample_lm(cleaned_resumes)
 }
 ```
@@ -222,15 +343,21 @@ You can do the same thing using the `*apply` family. Here it is with `lapply()`:
 
 ```r
 set.seed(1000) # replication
-results <- lapply(1:100, function(x) random_sample_lm(cleaned_resumes))
+results <- lapply(1:10, function(x) random_sample_lm(cleaned_resumes))
 ```
+
+**Challenge**: Try writing a lapply that iterates over the odd numbers from 1 to 10 or a vector of strings like we did for the loop above.
+
+Note that the `lapply` takes each element of the vector as an input, which is the first thing passed to the function, `function(x)`. Can you think of a way to make the syntax less confusing?
+
+#### Progress Bar: `pbapply`
 
 Also, the `pbapply` package has a progress bar, which is nice for long simulations.
 
 
 ```r
 set.seed(1000) # replication
-results <- pbapply::pblapply(1:100, function(x) random_sample_lm(cleaned_resumes))
+results <- pbapply::pblapply(1:10, function(x) random_sample_lm(cleaned_resumes))
 ```
 
 ### Map
@@ -240,12 +367,12 @@ The `map()` function from the **purrr** package is a great way to iterate over a
 
 ```r
 set.seed(1000)
-results <- map_df(1:100, function(x) random_sample_lm(cleaned_resumes))
+results <- map_df(1:10, function(x) random_sample_lm(cleaned_resumes))
 ```
 
-## Parallel Processing 
+## Parallel Programming 
 
-Parallel processing is a pretty handy trick to speed up your code. It's especially useful for computationally intensive simulations that can be broken up into smaller chunks. As a warning, parallel programming can get quite complex, so we're sticking with the basics today. For more advanced coverage, check work by [Grant McDermott](https://grantmcdermott.com/ds4e/parallel.html#general-parallel-programming-topics).
+Parallel Programming is a pretty handy trick to speed up your code. It's especially useful for computationally intensive simulations that can be broken up into smaller chunks. As a warning, parallel programming can get quite complex, so we're sticking with the basics today. For more advanced coverage, check work by [Grant McDermott](https://grantmcdermott.com/ds4e/parallel.html#general-parallel-programming-topics).
 
 First, let's check how many cores you have on your machine. R runs things in parallel by splitting them up between cores! 
 
@@ -275,99 +402,19 @@ future_lapply(1:1e3,
 ```
 
 ```
-## Warning: UNRELIABLE VALUE: One of the 'future.apply' iterations
-## ('future_lapply-1') unexpectedly generated random numbers without declaring so.
-## There is a risk that those random numbers are not statistically sound and the
-## overall results might be invalid. To fix this, specify 'future.seed=TRUE'. This
-## ensures that proper, parallel-safe random numbers are produced via the
-## L'Ecuyer-CMRG method. To disable this check, use 'future.seed = NULL', or set
-## option 'future.rng.onMisuse' to "ignore".
-```
-
-```
-## Warning: UNRELIABLE VALUE: One of the 'future.apply' iterations
-## ('future_lapply-2') unexpectedly generated random numbers without declaring so.
-## There is a risk that those random numbers are not statistically sound and the
-## overall results might be invalid. To fix this, specify 'future.seed=TRUE'. This
-## ensures that proper, parallel-safe random numbers are produced via the
-## L'Ecuyer-CMRG method. To disable this check, use 'future.seed = NULL', or set
-## option 'future.rng.onMisuse' to "ignore".
-```
-
-```
-## Warning: UNRELIABLE VALUE: One of the 'future.apply' iterations
-## ('future_lapply-3') unexpectedly generated random numbers without declaring so.
-## There is a risk that those random numbers are not statistically sound and the
-## overall results might be invalid. To fix this, specify 'future.seed=TRUE'. This
-## ensures that proper, parallel-safe random numbers are produced via the
-## L'Ecuyer-CMRG method. To disable this check, use 'future.seed = NULL', or set
-## option 'future.rng.onMisuse' to "ignore".
-```
-
-```
-## Warning: UNRELIABLE VALUE: One of the 'future.apply' iterations
-## ('future_lapply-4') unexpectedly generated random numbers without declaring so.
-## There is a risk that those random numbers are not statistically sound and the
-## overall results might be invalid. To fix this, specify 'future.seed=TRUE'. This
-## ensures that proper, parallel-safe random numbers are produced via the
-## L'Ecuyer-CMRG method. To disable this check, use 'future.seed = NULL', or set
-## option 'future.rng.onMisuse' to "ignore".
-```
-
-```
-## Warning: UNRELIABLE VALUE: One of the 'future.apply' iterations
-## ('future_lapply-5') unexpectedly generated random numbers without declaring so.
-## There is a risk that those random numbers are not statistically sound and the
-## overall results might be invalid. To fix this, specify 'future.seed=TRUE'. This
-## ensures that proper, parallel-safe random numbers are produced via the
-## L'Ecuyer-CMRG method. To disable this check, use 'future.seed = NULL', or set
-## option 'future.rng.onMisuse' to "ignore".
-```
-
-```
-## Warning: UNRELIABLE VALUE: One of the 'future.apply' iterations
-## ('future_lapply-6') unexpectedly generated random numbers without declaring so.
-## There is a risk that those random numbers are not statistically sound and the
-## overall results might be invalid. To fix this, specify 'future.seed=TRUE'. This
-## ensures that proper, parallel-safe random numbers are produced via the
-## L'Ecuyer-CMRG method. To disable this check, use 'future.seed = NULL', or set
-## option 'future.rng.onMisuse' to "ignore".
-```
-
-```
-## Warning: UNRELIABLE VALUE: One of the 'future.apply' iterations
-## ('future_lapply-7') unexpectedly generated random numbers without declaring so.
-## There is a risk that those random numbers are not statistically sound and the
-## overall results might be invalid. To fix this, specify 'future.seed=TRUE'. This
-## ensures that proper, parallel-safe random numbers are produced via the
-## L'Ecuyer-CMRG method. To disable this check, use 'future.seed = NULL', or set
-## option 'future.rng.onMisuse' to "ignore".
-```
-
-```
-## Warning: UNRELIABLE VALUE: One of the 'future.apply' iterations
-## ('future_lapply-8') unexpectedly generated random numbers without declaring so.
-## There is a risk that those random numbers are not statistically sound and the
-## overall results might be invalid. To fix this, specify 'future.seed=TRUE'. This
-## ensures that proper, parallel-safe random numbers are produced via the
-## L'Ecuyer-CMRG method. To disable this check, use 'future.seed = NULL', or set
-## option 'future.rng.onMisuse' to "ignore".
-```
-
-```
 ## # A tibble: 1,000 × 1
 ##    afamTRUE
 ##       <dbl>
-##  1  -0.0365
-##  2  -0.0403
-##  3  -0.0298
-##  4  -0.0190
-##  5  -0.0309
-##  6  -0.0307
-##  7  -0.0267
-##  8  -0.0242
-##  9  -0.0237
-## 10  -0.0463
+##  1  -0.0339
+##  2  -0.0425
+##  3  -0.0380
+##  4  -0.0347
+##  5  -0.0318
+##  6  -0.0261
+##  7  -0.0316
+##  8  -0.0358
+##  9  -0.0329
+## 10  -0.0230
 ## # ℹ 990 more rows
 ```
 
@@ -376,7 +423,7 @@ toc(log=TRUE)
 ```
 
 ```
-## 3.61 sec elapsed
+## 7.3 sec elapsed
 ```
 
 #### pbapply
@@ -390,7 +437,7 @@ toc(log=TRUE)
 ```
 
 ```
-## 3.86 sec elapsed
+## 12.61 sec elapsed
 ```
 
 ### furrr
@@ -426,14 +473,14 @@ toc(log=TRUE)
 ```
 
 ```
-## 6.52 sec elapsed
+## 6.03 sec elapsed
 ```
 
 This is the best way to make sure you understand the bootstrapping process. 
 
 ## Bootstrapping out of the box
 
-### *sandwich* package
+### **sandwich** package
 
 The sandwich package is great for estimating all sorts of funny standard errors in R. It is often combined with the `coeftest` function from the **lmtest** package to substitute new standard errors into the model after estimation and specify the number of replications. 
 
@@ -477,10 +524,9 @@ coeftest(m, vcov = vcovBS(m,
 ## 
 ## t test of coefficients:
 ## 
-##             Estimate Std. Error t value  Pr(>|t|)    
-## (Intercept)  54.0666    51.3619  1.0527   0.30119    
-## mpg          -2.7748     1.3154 -2.1095   0.04365 *  
-## cyl          23.9786     5.1507  4.6554 6.603e-05 ***
+##               Estimate Std. Error t value  Pr(>|t|)    
+## (Intercept)  0.0965092  0.0056755 17.0045 < 2.2e-16 ***
+## afamTRUE    -0.0320329  0.0074471 -4.3014 1.731e-05 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ```
@@ -489,7 +535,9 @@ One challenge is **sandwich** only works for standard error calculations and doe
 
 ### **boot** package
 
-The boot package is one of the most flexible packages for bootstrapping in R. It allows you to bootstrap any function that you can write in R. It also allows you to parallelize your bootstrap simulations, which can be very useful for computationally intensive simulations. 
+The boot package is one of the most flexible packages for bootstrapping in R. It allows you to bootstrap any function that you can write in R and to implement bootstrapping random indices, random frequencies, and random weights -- which are more complicated approaches to bootstrapping. It also allows you to parallelize your bootstrap simulations directly. 
+
+The way it works, is it will automatically create R samples of the data and feed that to your function. then you will need to pass an index to your function to make sure it knows how to iterate through these samples. Here's an example:
 
 
 ```r
@@ -503,15 +551,112 @@ est_model <- function(d, index) {
     # Use index to pick the bootstrap sample
     m <- lm(call ~ afam, data = d[index,])
     # Return the estimate(s) we want to bootstrap
-    return(c(coef(m)['afam']))
+    return(c(coef(m)[2]))
 }
 
 # Now the bootstrap call!
 boot_results <- boot(data=cleaned_resumes, # data
                 statistic=est_model, # Estimation function,
-
                 R=1000) # Number of bootstrap simulations
+
+print(boot_results)
 ```
+
+```
+## 
+## ORDINARY NONPARAMETRIC BOOTSTRAP
+## 
+## 
+## Call:
+## boot(data = cleaned_resumes, statistic = est_model, R = 1000)
+## 
+## 
+## Bootstrap Statistics :
+##        original       bias    std. error
+## t1* -0.03203285 0.0001385447 0.007766129
+```
+
+```r
+# confidence intervals
+print(boot.ci(boot_results,
+  type=c('norm', # assumes a normal distribution
+    'basic', # the basic bootstrap uses a Reverse Percentile Interval formula
+    'perc'))) # the actual 2.5th and 97.5th percentile
+```
+
+```
+## BOOTSTRAP CONFIDENCE INTERVAL CALCULATIONS
+## Based on 1000 bootstrap replicates
+## 
+## CALL : 
+## boot.ci(boot.out = boot_results, type = c("norm", "basic", "perc"))
+## 
+## Intervals : 
+## Level      Normal              Basic              Percentile     
+## 95%   (-0.0474, -0.0170 )   (-0.0481, -0.0176 )   (-0.0464, -0.0160 )  
+## Calculations and Intervals on Original Scale
+```
+
+The different types of confidence intervals are explained in the help file for `boot.ci` or on [Wikipedia](https://en.wikipedia.org/wiki/Bootstrapping_(statistics)#:~:text=The%20basic%20idea%20of%20bootstrapping,data%20(resampled%20%E2%86%92%20sample)). The "norm" is the default and assumes a normal distribution. The "basic" uses a Reverse Percentile Interval formula, which is easier to justify mathematically, though it is a little confusing to follow. The "perc" uses the actual 2.5th and 97.5th percentiles from your data. 
+
+#### Stratifying
+
+Maybe you noticed that you should be sampling equally for each group. Well that would be stratified sampling, which `boot()` handles incredibly well with the `strata` argument. Go to the help file for `boot` and try to figure out how to stratify the sampling.
+
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+
+```r
+boot(data=cleaned_resumes, # data
+                statistic=est_model, # Estimation function,
+                R=1000, # Number of bootstrap simulations
+                strata = cleaned_resumes$afam) # Stratify by afam
+```
+
+```
+## 
+## STRATIFIED BOOTSTRAP
+## 
+## 
+## Call:
+## boot(data = cleaned_resumes, statistic = est_model, R = 1000, 
+##     strata = cleaned_resumes$afam)
+## 
+## 
+## Bootstrap Statistics :
+##        original        bias    std. error
+## t1* -0.03203285 -0.0002632444 0.007709421
+```
+
+#### Parallel
+
+The results tell you the original value(s) without sampling, the bias (the difference between the mean of the bootstraps and your estimate), and the bootstrapped standard errors.
 
 Here's that again, but now in parallel:
 
@@ -524,12 +669,14 @@ boot_results <- boot(data=cleaned_resumes, # data
                 ncpus = parallel::detectCores()) # number of cores to use
 ```
 
+Sadly, if you are on a windows machine "multicore" will not work due to technical glitches. You can use "snow", but the documentation explains that more work is needed to make that work. 
+
 There are a number of handy visualization tools and table shortcuts to use with the **boot** package too:
 
 
 ```r
 # See the coefficient estimates and their bootstrap standard errors
-plot(results)
+plot(boot_results)
 ```
 
 ![](13a-bootstrapping-practice_files/figure-html/plot-boot-1.png)<!-- -->
@@ -549,10 +696,110 @@ stargazer(m1, se = list(tidy_results$std.error), type = 'text')
 
 ```
 ## 
-## % Error: Argument 'se' must be NULL (default), or a list of numeric vectors.
+## ===============================================
+##                         Dependent variable:    
+##                     ---------------------------
+##                                call            
+## -----------------------------------------------
+## afam                          -0.032           
+##                                                
+##                                                
+## Constant                     0.097***          
+##                               (0.008)          
+##                                                
+## -----------------------------------------------
+## Observations                   4,870           
+## R2                             0.003           
+## Adjusted R2                    0.003           
+## Residual Std. Error      0.272 (df = 4868)     
+## F Statistic          16.931*** (df = 1; 4868)  
+## ===============================================
+## Note:               *p<0.1; **p<0.05; ***p<0.01
 ```
 
 That said, it can be a bit cumbersome to use. For example, if you want to bootstrap a function that takes more than two arguments, you need to use the `...` argument and define `extraPar` and `numCenter`. This can be a bit confusing and easy to screw up.
+
+#### Frequency bootstrapping
+
+The **boot** package also allows you to bootstrap using random frequencies. Frequencies are useful if you have survey data and want to account for the survey design. Essentially, each row is an observation that occurs multiple times in real life, but is recorded only once in the data. The frequency is the number of times that observation occurs in real life.
+
+I'll create a frequency table below and just calculate the weighted mean of resume callbacks.^[Why am I doing the weighted mean? Cause I am writing these up quickly and don't want to write a new function to do the regression. You could figure this out for yourself if you wanted!]
+
+
+```r
+# Create a resume dataframe with frequencies by name
+# The call variable is now the average
+set.seed(1)
+cleaned_resume_freq <- cleaned_resumes %>%
+  group_by(name,female,afam) %>%
+  summarise(frequency=n(),
+    call=mean(call))
+```
+
+```
+## `summarise()` has grouped output by 'name', 'female'. You can override using
+## the `.groups` argument.
+```
+
+```r
+# The weighted mean of calls:
+weighted.mean(x=cleaned_resume_freq$call, # variable to average
+  w=cleaned_resume_freq$frequency # the weight
+  )
+```
+
+```
+## [1] 0.08049281
+```
+
+
+```r
+set.seed(1)
+boot(cleaned_resume_freq$call, 
+  weighted.mean, 
+  R = 1000, stype = "f")
+```
+
+```
+## 
+## ORDINARY NONPARAMETRIC BOOTSTRAP
+## 
+## 
+## Call:
+## boot(data = cleaned_resume_freq$call, statistic = weighted.mean, 
+##     R = 1000, stype = "f")
+## 
+## 
+## Bootstrap Statistics :
+##       original       bias    std. error
+## t1* 0.07822643 2.130659e-05 0.004906084
+```
+
+#### Weight bootstrapping
+
+Weights operate similar to frequencies, but can be applied to a dataset without a frequency column. The weights just up or down weight the observations. 
+
+
+```r
+boot(cleaned_resumes$call, 
+  weighted.mean, 
+  R = 1000, stype = "w")
+```
+
+```
+## 
+## ORDINARY NONPARAMETRIC BOOTSTRAP
+## 
+## 
+## Call:
+## boot(data = cleaned_resumes$call, statistic = weighted.mean, 
+##     R = 1000, stype = "w")
+## 
+## 
+## Bootstrap Statistics :
+##       original       bias    std. error
+## t1* 0.08049281 0.0001722793 0.004021416
+```
 
 The code below does not work. Can you figure out why?
 
